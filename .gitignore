@@ -1,0 +1,9 @@
+# Created by .ignore support plugin (hsz.mobi)
+.gitignore
+.idea
+db.sqlite3
+design.ai
+/image/preview/*
+/image/raw/*
+/image/thumb/*
+/zip

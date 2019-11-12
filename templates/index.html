@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% block title %}首页-发现精彩{% endblock %}
+{% load static %}
+{% block style %}
+    <style>
+        button,.btn
+        {
+            cursor: pointer;
+        }
+        label{
+            color: #aaaaaa;
+        }
+        input{
+            margin-bottom: 10px;
+        }
+
+      .bd-placeholder-img {
+        font-size: 1.125rem;
+        text-anchor: middle;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
+
+      @media (min-width: 768px) {
+        .bd-placeholder-img-lg {
+          font-size: 3.5rem;
+        }
+      }
+        .jumbotron
+        {
+            border-radius: 0!important;
+            background: url({% static "img/old1.jpg" %});
+        }
+        .jumbotron-heading
+        {
+            font-size: 42px;
+            color: white;
+        }
+        #subt
+        {
+            color: antiquewhite!important;
+        }
+        .my-2{
+            width: 100px!important;
+            margin: 20px!important;
+            color: white!important;
+        }
+        #form input{
+            display: inline-block;
+            width: 200px;
+            outline: none;
+            border-top-width: 0;
+            border-left-width: 0;
+            border-right-width: 0;
+            border-bottom: 2px white solid;
+            color: white;
+            font-size: 18px;
+            margin: 20px;
+            background: rgba(0,0,0,0);
+            text-indent: 5px;
+        }
+        #type{
+            display: none!important;
+        }
+        ::-webkit-input-placeholder { /* WebKit browsers */
+          color: wheat;
+          font-size: 16px;
+        }
+
+    </style>
+{% endblock %}
+{% block main %}
+    <section class="jumbotron text-center">
+    <div class="container">
+      <h1 class="jumbotron-heading">Photonet</h1>
+      <p class="lead text-muted" id="subt">上传图片，记录生活，分享片刻精彩</p>
+       <div id="inputp">
+           <form id="form" method="post" action="in/">
+               {% csrf_token %}
+                <input placeholder="用户名" type="text" name="username"/>
+                <input placeholder="密码" type="password" name="password"/>
+                <input id="type" name="type"/>
+           </form>
+       </div>
+      <p>
+        <a class="btn btn-primary my-2" onclick="$('#type').val('signup');$('#form').submit()">注册</a>
+        <a class="btn btn-secondary my-2" onclick="$('#type').val('login');$('#form').submit()">登录</a>
+      </p>
+    </div>
+  </section>
+  <div class="album py-5 bg-light">
+    <div class="container">
+
+      <div class="row">
+        <div class="col-md-4">
+          <div class="card mb-4 shadow-sm">
+            <svg class="bd-placeholder-img card-img-top" width="100%" height="225" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" focusable="false" role="img" aria-label="Placeholder: Thumbnail"><title>Placeholder</title><rect width="100%" height="100%" fill="#55595c"/><text x="50%" y="50%" fill="#eceeef" dy=".3em">Thumbnail</text></svg>
+            <div class="card-body">
+              <p class="card-text">This is a wider card with supporting text below as a natural lead-in to additional content. This content is a little bit longer.</p>
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="btn-group">
+                  <button type="button" class="btn btn-sm btn-outline-secondary">View</button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary">Edit</button>
+                </div>
+                <small class="text-muted">9 mins</small>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card mb-4 shadow-sm">
+            <svg class="bd-placeholder-img card-img-top" width="100%" height="225" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" focusable="false" role="img" aria-label="Placeholder: Thumbnail"><title>Placeholder</title><rect width="100%" height="100%" fill="#55595c"/><text x="50%" y="50%" fill="#eceeef" dy=".3em">Thumbnail</text></svg>
+            <div class="card-body">
+              <p class="card-text">This is a wider card with supporting text below as a natural lead-in to additional content. This content is a little bit longer.</p>
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="btn-group">
+                  <button type="button" class="btn btn-sm btn-outline-secondary">View</button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary">Edit</button>
+                </div>
+                <small class="text-muted">9 mins</small>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card mb-4 shadow-sm">
+            <svg class="bd-placeholder-img card-img-top" width="100%" height="225" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" focusable="false" role="img" aria-label="Placeholder: Thumbnail"><title>Placeholder</title><rect width="100%" height="100%" fill="#55595c"/><text x="50%" y="50%" fill="#eceeef" dy=".3em">Thumbnail</text></svg>
+            <div class="card-body">
+              <p class="card-text">This is a wider card with supporting text below as a natural lead-in to additional content. This content is a little bit longer.</p>
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="btn-group">
+                  <button type="button" class="btn btn-sm btn-outline-secondary">View</button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary">Edit</button>
+                </div>
+                <small class="text-muted">9 mins</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+{% block script %}
+    <script>
+    </script>
+{% endblock %}
+
