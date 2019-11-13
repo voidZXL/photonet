@@ -48,6 +48,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'photo.middleware.DataParsingMiddleware',
+    # 'photo.middleware.JSONParsingMiddleware'
 ]
 
 ROOT_URLCONF = 'photonet.urls'

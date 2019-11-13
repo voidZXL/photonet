@@ -216,9 +216,9 @@
                         <textarea name="desc" id="desc" class="form-control"></textarea>
                     </form>
                     <label for="time-span">创建时间:</label>
-                    <span id="time-span">2019-11-12</span>
+                    <span id="time-span"></span>
                     <label for="space-span">全部大小:</label>
-                    <span id="space-span">78M</span>
+                    <span id="space-span"></span>
                     <div class="custom-control custom-switch">
                       <input type="checkbox" onclick="publicChange()" class="custom-control-input" id="public">
                       <label class="custom-control-label" for="public">公开</label>
@@ -250,7 +250,8 @@
                                 <textarea name="desc" id="photo-desc" class="form-control"></textarea>
                           </form>
                           <div class="custom-control custom-switch">
-                              <input type="checkbox" class="custom-control-input" id="cover" >
+                              <input type="checkbox" class="custom-control-input" id="cover"
+                              onclick="handleCover()">
                               <label class="custom-control-label" for="cover">设为相册封面</label>
                           </div>
                           <div class="custom-control custom-switch">
@@ -278,17 +279,24 @@
         let deletes = [];
         let files = [];
         let photos = [];
+        let originl = 0;
         let select = 0;
+        let cover_i = 0;
+        let pd_list = [];
         let xhr=new XMLHttpRequest();
+        let create=true;
         let aid=0;
+        //document.getElementsByName("csrfmiddlewaretoken")[0].value;
         $("#photo").change(function (e) {
             let dom='';
             let l = e.target.files.length;
-            let fl = files.length;
-            let bl = previews.length;
+            //let fl = files.length;
+            let bl = pd_list.length?(pd_list[pd_list.length-1]+1):0;//previews.length;
+            console.log(pd_list,bl);
 
             for(let i=0;i<l;i++)
             {
+                pd_list.push(bl+i);
                 let f = e.target.files[i];
                 let s = String(getObjectURL(f));
                 files.push(f);
@@ -296,17 +304,22 @@
                 photos.push({
                     'name':'',
                     'desc':'',
-                    'image':f.name,
+                    //'image':f.name,
                     'can_download':false
                 });
                 dom += "<div id=\"pd"+(bl+i)+"\" style=\"background: url("+s+") 0 0 / cover;\"></div>";
             }
             $(".switcher").append(dom);
-
-            for(let i=bl;i<previews.length;i++)
+            if(previews.length===l)
             {
-                $("#pd"+i).click(function () {
-                    changeFocus(select, i);
+                create=true;
+                changeFocus(select,select);
+                handleCover();
+            }
+            for(let i=0;i<l;i++)
+            {
+                $("#pd"+(bl+i)).click(function () {
+                    changeFocus(select, bl+i);
                 });
             }
         });
@@ -314,8 +327,11 @@
         let desc = $("#photo-desc");
         let cand = $("#cand");
 
+
+        let csrf = $.cookie("csrftoken");
+        console.log(csrf);
         function changeFocus(outs,ins){
-            $("#pd"+outs).removeAttr("class");
+            $("#pd"+pd_list[outs]).removeAttr("class");
             select = ins;
              $(".previewer").css({backgroundImage:"url("+previews[select]+")"});
              let p = photos[select];
@@ -323,8 +339,9 @@
              name.val(p['name']);
              desc.val(p['desc']);
              cand[0].checked = p['can_download'];
+             $("#cover")[0].checked = (cover_i===select);
              $("#download").attr({href: '/static/raw/'+p['image'],download:p['name'] || "photo"});
-            $("#pd"+select).attr("class","selected");
+            $("#pd"+pd_list[select]).attr("class","selected");
         }
         name.change(function () {
             photos[select]['name'] = name.val();
@@ -337,10 +354,51 @@
          });
 
         function deletePhoto(){
+            if(pd_list.length>1) {
+                $("#pd" + pd_list[select]).remove();
+                if (photos[select].hasOwnProperty('id')) {
+                    deletes.push(photos[select]['id']);
+                }
+                previews.splice(select, 1);
+                photos.splice(select, 1);
+                pd_list.splice(select, 1);
+                if (select > originl) {
+                    files.splice(select - originl, 1);
+                }
 
+                if (cover_i === select) {
+                    select = 0;
+                    handleCover();
+                } else if (cover_i > select) {
+                    cover_i--;
+                }
+
+                console.log(files,photos,deletes);
+
+                for (let i = 0; i < photos.length; i++) {
+                    $("#pd" + pd_list[i]).unbind('click');
+                    $("#pd" + pd_list[i]).click(function () {
+                        console.log(select, i);
+                        changeFocus(select, i);
+                    });
+                }
+                changeFocus(select, 0);
+            }else
+            {
+                alert("再进行删除就没有照片了，可以直接删除相册");
+            }
         }
         function deleteAlbum(id){
-
+            $.ajax({
+                url:'/album/'+id,
+                method:'delete',
+                beforeSend: function(request) {
+                    request.setRequestHeader("X-CSRFToken", csrf);
+                },
+                success:function (msg) {
+                    window.location.reload();
+                }
+            })
         }
         function downloadAlbum(id, name){
             let link = document.createElement('a');
@@ -363,32 +421,68 @@
             {
                  changeFocus(select, select-1);
             }
+            else
+            {
+                changeFocus(select, previews.length-1);
+            }
         });
         $("#arrow-r").click(function () {
             if(select<previews.length-1)
             {
                 changeFocus(select, select+1);
             }
+            else
+            {
+                changeFocus(select, 0);
+            }
         });
 
-        function handleSubmit(type){
-            if(files.length)
+        function handleCover() {
+
+            cover_i = select;
+            console.log(previews,cover_i,previews[cover_i]);
+            $("#preview").css({backgroundImage:"url("+previews[cover_i]+")"});
+        }
+
+
+        function handleSubmit(){
+            if(files.length||!create)
             {
+                let method = 'post';
+                let url = '/album';
                 let fd = new FormData($("#album-form")[0]);
                 if(!fd.get('name'))
                 {
                     $("#name").attr('placeholder','请填写相册名称');
                     return;
                 }
-                fd.set('type',type);
-                fd.set('id',aid);
+                fd.set('public',$("#public")[0].checked);
+                fd.set('cover', cover_i);
+
+                if(!create)
+                {
+                    url = url + '/' + aid;
+                    method = 'put';
+                }
+
                 for(let i=0;i<files.length;i++)
                 {
                     fd.append('file',files[i]);
                 }
-                console.log(fd);
+                for(let i=0;i<photos.length;i++)
+                {
+                    fd.append('photos',JSON.stringify(photos[i]));
+                }
+                for(let i=0;i<deletes.length;i++)
+                {
+                    fd.append('deletes',deletes[i]);
+                }
+                //console.log(fd);
                 let xhr=new XMLHttpRequest();
-                xhr.open("post","/album");
+                xhr.onreadystatechange = albumCallback;
+                xhr.open(method, url);
+                xhr.setRequestHeader("X-CSRFToken", csrf);
+
                 xhr.send(fd);
             }
             else
@@ -400,15 +494,20 @@
             aid = id;
             $.ajax({
                 type:'GET',
-                url:'/album/',
-                data:{
-                    id:id
-                },
+                url:'/album/'+id,
                 success:function (msg) {
+                    create=false;
                     let dom = '',i=0;
                     $("#name").val(msg['name']);
                     $("#desc").val(msg['desc']);
+                    $("#time-span").html(msg['date']);
+                    $("#space-span").html(msg['size']);
+                    $("#public")[0].checked = msg['public'];
+                    select = msg['cover_i'];
+
+
                     photos = msg['photos'];
+                    originl=photos.length;
                     previews = [];
                     for(let p of msg['photos']){
                         let t_url = '/static/thumb/'+p['image'];
@@ -419,9 +518,11 @@
                     }
                     $(".switcher").html(dom);
                     files=[];
+                    handleCover();
                     changeFocus(select,0);
                     for(let i=0;i<msg['photos'].length;i++)
                     {
+                        pd_list.push(i);
                         $("#pd"+i).click(function () {
                             changeFocus(select,i);
                         });
@@ -438,8 +539,9 @@
                 {
                     alert('上传失败');
                 }
-               window.location.reload();
+			     window.location.reload();
             }
+
         }
         function getObjectURL(file) {
             let url = null;

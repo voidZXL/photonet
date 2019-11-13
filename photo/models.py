@@ -1,6 +1,8 @@
 from django.db import models
-import uuid, os
+import uuid
+import os
 import zipfile
+import json
 from PIL import Image
 from photonet.settings import IMAGE_ROOT, BASE_DIR
 
@@ -39,8 +41,6 @@ class Account(models.Model):
             return False
         return cls.objects.create(username=urn, password=pwd)
 
-
-
     @classmethod
     def get_user(cls, session):
         if 'user' not in session:
@@ -61,8 +61,6 @@ class Account(models.Model):
         for a in self.album_set.all():
             result.append(a.get_data())
         return result
-
-
 
     class Meta:
         db_table = 'account'
@@ -86,6 +84,11 @@ class Photo(Content):
 
     PREVIEW_SIZE = 600
     THUMB_SIZE = 100
+
+    @classmethod
+    def get(cls, _id):
+        query = cls.objects.filter(id=_id)
+        return query[0] if query else None
 
     @classmethod
     def store(cls, file):
@@ -117,14 +120,15 @@ class Photo(Content):
         f.close()
         return name
 
-    @classmethod
-    def remove(cls, name):
+    def remove(self):
+        name = self.image_name
+
         raw_path = os.path.join(IMAGE_ROOT, 'raw', name)
         preview_path = os.path.join(IMAGE_ROOT, 'preview', name)
         thumb_path = os.path.join(IMAGE_ROOT, 'thumb', name)
         size = os.path.getsize(raw_path)
         try:
-            cls.objects.get(image_name=name).delete()
+            self.delete()
             os.remove(raw_path)
             os.remove(preview_path)
             os.remove(thumb_path)
@@ -138,17 +142,19 @@ class Photo(Content):
 
 
 def process_size(size, depth=0):
-    UNIT = ['B', 'K', 'M', 'G', 'T']
+    unit = ['B', 'K', 'M', 'G', 'T']
+    if size < 1 or not size:
+        return "0B"
     if 1 < size < 1000:
-        return str(size) + UNIT[depth]
+        return str(size) + unit[depth]
     return process_size(int(size/1024), depth+1)
 
 
 class Album(Content):
     public = models.BooleanField(default=False)
-    cover = models.ForeignKey('Photo', related_name='covered_album', on_delete=models.CASCADE)
+    cover = models.PositiveSmallIntegerField()# models.ForeignKey('Photo', related_name='covered_album', on_delete=models.CASCADE)
     edit_date = models.DateField(auto_now=True)
-    total_size = models.PositiveIntegerField()
+    total_size = models.PositiveIntegerField(default=0)
 
     @classmethod
     def get(cls, _id):
@@ -163,7 +169,8 @@ class Album(Content):
             'public': self.public,
             'photos': self.get_photos(),
             'size': process_size(self.total_size),
-            'cover': self.photo_set.last().image_name,
+            'cover_i': self.cover,
+            'cover': self.photo_set.all()[self.cover].image_name,
             'date': self.create_date.strftime("%Y-%m-%d"),
             'likes': self.likes
         }
@@ -184,49 +191,64 @@ class Album(Content):
         result = []
         for p in self.photo_set.all():
             result.append({
-                'id': self.id,
+                'id': p.id,
                 'name': p.name,
+                'desc': p.description,
                 'image': p.image_name,
-                'date': self.create_date.strftime("%Y-%m-%d"),
+                'can_download':p.can_download,
+                # 'date': self.create_date.strftime("%Y-%m-%d"),
                 'likes': p.likes,
             })
         return result
 
-    def add_photos(self, files, info):
+    def add_photos(self, files, photos):
         size = 0
         for i, file in enumerate(files):
-            size += file.size()
-            photo = Photo.objects.create(creator=self.creator,
-                                         name=info[i]['name'],
-                                         descripton=info[i]['desc'],
-                                         image_name=Photo.store(file),
-                                         album=self)
-            if info['is_cover']:
-                self.cover = photo
+            size += file.size
+            p = photos[i]
+            name = p['name'] or self.name + str(i)
+            Photo.objects.create(creator=self.creator,
+                                 name=name,
+                                 description=p['desc'],
+                                 can_download=p['can_download'],
+                                 image_name=Photo.store(file),
+                                 album=self)
         return size
 
-    def modify(self, album, files):
-        self.name = album['name']
-        self.desc = album['desc']
-        self.public = album['public']
-        self.cover_id = album['cover'] or 0
-        size = self.add_photos(files, album['photos'])
+    def modify(self, data, files):
+        self.name = data['name']
+        self.description = data['desc']
+        self.public = data['public']
+        self.cover = data['cover']
+        photos = data['photos']
+        size = self.add_photos(files, photos)
         self.total_size += size
-        for d in album['deletes']:
-            size += Photo.remove(d)
-        self.total_size -= size
+        if 'deletes' in data:
+            deletes = data['deletes'] if type(data['deletes']) == list else [data['deletes']]
+            for i in deletes:
+                photo_query = self.photo_set.filter(id=i)
+                if photo_query:
+                    size += photo_query[0].remove()
+            self.total_size -= size
+        for i, photo in enumerate(photos):
+            p = self.photo_set.all()[i]
+            p.name = photo['name']
+            p.description = photo['desc']
+            p.can_download = photo['can_download']
+            p.save()
         self.save()
 
     def remove(self):
         for f in self.photo_set.all():
-            f.remove(f.image_name)
+            f.remove()
         self.delete()
 
     @classmethod
-    def create(cls, user, album, files):
-        album = cls.objects.create(creator=user, name=album['name'],
-                                   public=album['public'], description=album['desc'])
-        album.total_size = album.add_photos(files, album['photos'])
+    def create(cls, user, data, files):
+        photos = data['photos']
+        album = cls.objects.create(creator=user, name=data['name'], cover=data['cover'],
+                                   public=bool(data['public']), description=data['desc'])
+        album.total_size = album.add_photos(files, photos)
         album.save()
         return album
 

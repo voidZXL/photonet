@@ -1,69 +1,56 @@
 from django.shortcuts import render, redirect
 from django.http import HttpResponse, JsonResponse, FileResponse
-from .models import Account, Album
-from .utils import handle
 from django.views import View
+from photo.models import Account, Album
+from photo.utils import handle,request_serialize
+import json
+from django.http import QueryDict
+from django.views.decorators.csrf import csrf_exempt
+# from django.contrib.auth.decorators import login_required
 
 
-@handle(redirect('/'))
-def join(request):
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        in_type = request.POST.get('type')
-
-        if in_type == 'login':
-            if Account.login(username, password):
-                request.session['user'] = username
-                return redirect('/me')
-        elif in_type == 'signup':
-            if Account.signup(username, password):
-                request.session['user'] = username
-                return redirect('/me')
-    return redirect('/')
-
-
-@handle
-def me(request):
-    if 'user' in request.session:
-        user = Account.get(request.session['user'])
-        return render(request, 'me.html', user.get_data())
-    return redirect('/')
-
-
-def index(request):
-    return render(request, 'index.html')
-
+@csrf_exempt
+def test(request):
+    print(request.POST.dict())
+    return JsonResponse(request.POST.dict())
 
 class AlbumView(View):
     data = {}
     post_temp = {
-        'album': {
+        'data': {
             'name': str,
             'desc': str,
-            'photos': {
+            'public': bool,
+            'photos': [{
                 'name': str,
                 'desc': str,
-                'can_download': str,
-            },
+                'can_download': bool,
+            }],
             'cover': int,
-            'deletes': list,
+            'deletes': [int],
         }
+    }
+    files_temp = {
+        'file': list,
     }
 
     def check(self, request):
         pass
 
-    @handle(redirect('/'))
+    def dispose(self):
+        pass
+
+    @handle()# (redirect('/'))
     def fetch(self, request):
         self.data = {
-            'album': request.POST.dict(),
+            'data': request.DATA,
+            # 'photos': request.DATA['photos'],
             'files': request.FILES.getlist('file'),
         }
 
-    @handle(redirect('/me'))
-    def get(self, request):
-        aid = request.GET.get('id')
+    @handle()# (redirect('/me'))
+    def get(self, request, aid):
+        # aid = request.GET.get('id')
         return JsonResponse(Album.get(aid).get_data())
 
     @handle(HttpResponse("0"))
@@ -77,15 +64,19 @@ class AlbumView(View):
 
     @handle(HttpResponse("0"))
     def put(self, request, aid):
+        # put = request_serialize(request)
+        print(request.DATA)
+        # print(json.dumps(request.DATA, ensure_ascii=False))
         self.fetch(request)
         Album.get(aid).modify(**self.data)
         return HttpResponse('1')
 
-    @handle
+    @handle()
     def delete(self, request, aid):
         Album.get(aid).remove()
+        return HttpResponse('1')
 
-    @handle(HttpResponse("0"))
+    @handle()# (HttpResponse("0"))
     def download(self, request, aid):
         return FileResponse(Album.get(aid).get_zip())
 
@@ -116,7 +107,34 @@ class AlbumView(View):
 #         return JsonResponse(Album.get(id).get_data())
 
 
+# @handle(redirect('/'))
+def join(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        in_type = request.POST.get('type')
 
+        if in_type == 'login':
+            if Account.login(username, password):
+                request.session['user'] = username
+                return redirect('/me')
+        elif in_type == 'signup':
+            if Account.signup(username, password):
+                request.session['user'] = username
+                return redirect('/me')
+    return redirect('/')
+
+
+# @handle
+def me(request):
+    if 'user' in request.session:
+        user = Account.get(request.session['user'])
+        return render(request, 'me.html', user.get_data())
+    return redirect('/')
+
+
+def index(request):
+    return render(request, 'index.html')
 
 
 
