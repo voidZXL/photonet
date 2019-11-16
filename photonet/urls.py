@@ -9,7 +9,7 @@ urlpatterns = [
     path('in/', join),
     path('me/', me),
     path('test/', test),
-    url('^album$', AlbumView.as_view()),
+    url('^album$', AlbumView.post),
     url('album/(.*)', AlbumView.as_view()),
     url('download/(.*)', AlbumView.download),
     path('admin/', admin.site.urls),

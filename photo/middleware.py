@@ -103,9 +103,10 @@ class DataParsingMiddleware(MiddlewareMixin):
                     request._load_post_and_files()
                     request.META['REQUEST_METHOD'] = request.method
 
-            request.DATA = dict_parser(request.POST)
-            if request.method != 'POST':
-                request.POST = QueryDict({})
+            if request.method == 'GET':
+                request.DATA = request.GET
+            else:
+                request.DATA = request.POST# dict_parser(request.POST)
         else:
             try:
                 request.DATA = json.loads(request.body)

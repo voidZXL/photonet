@@ -9,26 +9,45 @@ from django.views.decorators.csrf import csrf_exempt
 # from django.contrib.auth.decorators import login_required
 
 
+test_temp = {
+    'id': int,
+    'name': str,
+    'public': bool,
+    'cases': [{
+        'id': int,
+        'name': str,
+        'label': [str]
+    }],
+    'data': {
+        'course': [int],
+        'value': float,
+        'sub': {
+            'name': str,
+            'desc': str
+        }
+    }
+}
+
 @csrf_exempt
 def test(request):
-    print(request.POST.dict())
+    print(dict(request.DATA))
+    print(request.META['CONTENT_TYPE'])
     return JsonResponse(request.POST.dict())
+
 
 class AlbumView(View):
     data = {}
-    post_temp = {
-        'data': {
+    data_temp = {
+        'name': str,
+        'desc': str,
+        'public': bool,
+        'photos': [{
             'name': str,
             'desc': str,
-            'public': bool,
-            'photos': [{
-                'name': str,
-                'desc': str,
-                'can_download': bool,
-            }],
-            'cover': int,
-            'deletes': [int],
-        }
+            'can_download': bool,
+        }],
+        'cover': int,
+        'deletes': [int],
     }
     files_temp = {
         'file': list,
@@ -68,7 +87,7 @@ class AlbumView(View):
         print(request.DATA)
         # print(json.dumps(request.DATA, ensure_ascii=False))
         self.fetch(request)
-        Album.get(aid).modify(**self.data)
+        # Album.get(aid).modify(**self.data)
         return HttpResponse('1')
 
     @handle()

@@ -112,14 +112,21 @@
     }
     .album-name{
         text-indent: 10px;
-        height: 50px;
-        margin-bottom: 70px;
+        height: 40px;
+        margin-bottom: 10px;
         margin-right: 0!important;
         font-size: 26px;
     }
+    .total-num{
+        text-indent: 20px;
+        font-size: 16px;
+        margin-bottom: 50px;
+        color: #dddddd;
+        width: 100%;
+    }
     .shadow{
         background-color: rgba(0,0,0,0.5);
-        width: calc(100% + 1px);
+        width: calc(100% + 2px);
         height: 100%;
     }
     .like-num
@@ -187,6 +194,7 @@
                          onclick="albumEdit({{ album.id }})" title="查看并编辑" alt="编辑">
                     <div class="shadow">
                         <p class="album-name">{{ album.name }}</p>
+                        <p class="total-num">共{{ album.photo_num }}张照片</p>
                         <div class="bottom-div">
                             <img class="like" src="{% static 'img/like.svg' %}" alt="喜欢">
                             <span class="like-num">{{ album.likes }}</span>

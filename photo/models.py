@@ -90,6 +90,16 @@ class Photo(Content):
         query = cls.objects.filter(id=_id)
         return query[0] if query else None
 
+    def get_data(self):
+        return{
+                'id': self.id,
+                'name': self.name,
+                'desc': self.description,
+                'image': self.image_name,
+                'can_download': self.can_download,
+                'likes': self.likes,
+            }
+
     @classmethod
     def store(cls, file):
         name = str(uuid.uuid4()) + "." + file.name.split(".")[-1]
@@ -152,7 +162,7 @@ def process_size(size, depth=0):
 
 class Album(Content):
     public = models.BooleanField(default=False)
-    cover = models.PositiveSmallIntegerField()# models.ForeignKey('Photo', related_name='covered_album', on_delete=models.CASCADE)
+    cover = models.PositiveSmallIntegerField()
     edit_date = models.DateField(auto_now=True)
     total_size = models.PositiveIntegerField(default=0)
 
@@ -161,6 +171,15 @@ class Album(Content):
         query = cls.objects.filter(id=_id)
         return query[0] if query else None
 
+    def get_size(self):
+        size = 0
+        for p in self.photo_set.all():
+            path = os.path.join(IMAGE_ROOT, 'raw', p.image_name)
+            size += os.path.getsize(path)
+        self.total_size = size
+        self.save()
+        return process_size(size)
+
     def get_data(self):
         return{
             'id': self.id,
@@ -168,6 +187,7 @@ class Album(Content):
             'desc': self.description,
             'public': self.public,
             'photos': self.get_photos(),
+            'photo_num': len(self.photo_set.all()),
             'size': process_size(self.total_size),
             'cover_i': self.cover,
             'cover': self.photo_set.all()[self.cover].image_name,
@@ -190,15 +210,7 @@ class Album(Content):
     def get_photos(self):
         result = []
         for p in self.photo_set.all():
-            result.append({
-                'id': p.id,
-                'name': p.name,
-                'desc': p.description,
-                'image': p.image_name,
-                'can_download':p.can_download,
-                # 'date': self.create_date.strftime("%Y-%m-%d"),
-                'likes': p.likes,
-            })
+            result.append(p.get_data())
         return result
 
     def add_photos(self, files, photos):
@@ -223,13 +235,12 @@ class Album(Content):
         photos = data['photos']
         size = self.add_photos(files, photos)
         self.total_size += size
-        if 'deletes' in data:
-            deletes = data['deletes'] if type(data['deletes']) == list else [data['deletes']]
-            for i in deletes:
-                photo_query = self.photo_set.filter(id=i)
-                if photo_query:
-                    size += photo_query[0].remove()
-            self.total_size -= size
+        deletes = data['deletes']
+        for i in deletes:
+            photo_query = self.photo_set.filter(id=i)
+            if photo_query:
+                size += photo_query[0].remove()
+        self.total_size -= size
         for i, photo in enumerate(photos):
             p = self.photo_set.all()[i]
             p.name = photo['name']
